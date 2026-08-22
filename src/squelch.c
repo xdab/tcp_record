@@ -21,7 +21,7 @@ void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
     s->hp_coef = rc / (rc + dt);
 
     /* envelope follower: fast attack, slow decay */
-    float attack_ms = 5.0f;
+    float attack_ms = 2.0f;
     float decay_ms = 100.0f;
     s->env_attack = expf(-1.0f / ((attack_ms / 1000.0f) * (float)sample_rate));
     s->env_decay = expf(-1.0f / ((decay_ms / 1000.0f) * (float)sample_rate));
