@@ -88,20 +88,11 @@ int main(int argc, char **argv)
     float samples[SAMPLE_BUF_SIZE];
     int16_t outbuf[SAMPLE_BUF_SIZE];
     wav_t *wav = NULL;
-    int auto_record = sql_enabled && !opts.calibrate;
 
-    if (opts.output[0] != '\0' && !auto_record)
-    {
-        wav = wav_open(opts.output, opts.sample_rate, 1, 16);
-        if (!wav)
-        {
-            fprintf(stderr, "Error: cannot open WAV file: %s\n", opts.output);
-            net_close(net);
-            return EXIT_FAILURE;
-        }
-        fprintf(stderr, "WAV: writing to %s (%d Hz, 16-bit mono)\n",
-                opts.output, opts.sample_rate);
-    }
+    if (opts.auto_record && opts.rec_dir[0] != '\0')
+        fprintf(stderr, "Auto-record: WAVs will be saved to %s\n", opts.rec_dir);
+    else if (opts.auto_record)
+        fprintf(stderr, "Auto-record: WAVs will be saved to cwd\n");
 
     cal_state_t cal;
     if (opts.calibrate)
@@ -137,17 +128,25 @@ int main(int argc, char **argv)
                     if (sql.open)
                     {
                         /* squelch opened - start recording */
-                        time_t now = time(NULL);
-                        struct tm *tm = localtime(&now);
-                        char path[256];
-                        strftime(path, sizeof(path), "REC_%Y-%m-%d_%H-%M-%S", tm);
-                        int end = strlen(path);
-                        snprintf(path + end, sizeof(path) - end, "_%d.wav", opts.port);
-                        wav = wav_open(path, opts.sample_rate, 1, 16);
-                        if (wav)
-                            fprintf(stderr, "Squelch opened -> recording to %s\n", path);
-                        else
-                            fprintf(stderr, "Squelch opened -> failed to open %s\n", path);
+                        if (opts.auto_record)
+                        {
+                            time_t now = time(NULL);
+                            struct tm *tm = localtime(&now);
+                            char path[512];
+                            if (opts.rec_dir[0] != '\0')
+                                snprintf(path, sizeof(path), "%s/", opts.rec_dir);
+                            else
+                                path[0] = '\0';
+                            int end = strlen(path);
+                            strftime(path + end, sizeof(path) - end, "REC_%Y-%m-%d_%H-%M-%S", tm);
+                            end = strlen(path);
+                            snprintf(path + end, sizeof(path) - end, "_%d.wav", opts.port);
+                            wav = wav_open(path, opts.sample_rate, 1, 16);
+                            if (wav)
+                                fprintf(stderr, "Squelch opened -> recording to %s\n", path);
+                            else
+                                fprintf(stderr, "Squelch opened -> failed to open %s\n", path);
+                        }
                     }
                     else
                     {
@@ -166,7 +165,7 @@ int main(int argc, char **argv)
         float_to_s16le(samples, outbuf, n);
         if (wav)
             wav_write(wav, outbuf, n * sizeof(int16_t));
-        else if (!auto_record && write_all(STDOUT_FILENO, outbuf, n * sizeof(int16_t)) < 0)
+        if (opts.stdout_output && write_all(STDOUT_FILENO, outbuf, n * sizeof(int16_t)) < 0)
         {
             if (!do_exit)
                 fprintf(stderr, "Write error (broken pipe?)\n");

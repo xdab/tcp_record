@@ -15,7 +15,9 @@ typedef struct
     squelch_mode_t squelch_mode;
     int sample_rate;
     int calibrate;
-    char output[STATIC_STRING_SIZE];
+    int auto_record;
+    char rec_dir[STATIC_STRING_SIZE];
+    int stdout_output;
     int optind;
 } options_t;
 
