@@ -1,0 +1,23 @@
+# Build artifacts
+obj/
+bin/
+*.o
+*.d
+
+# System files
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Dependencies
+*.a
+*.so
+
+# Raw data files
+*.raw
+
+# Performance profiling outputs
+callgrind.out
