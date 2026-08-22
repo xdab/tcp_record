@@ -16,4 +16,19 @@
 
 extern volatile int do_exit;
 
+typedef enum
+{
+    SAMPLE_S8,
+    SAMPLE_U8,
+    SAMPLE_S16,
+    SAMPLE_U16,
+    SAMPLE_F32
+} sample_format_t;
+
+typedef enum
+{
+    ENDIAN_BE,
+    ENDIAN_LE
+} sample_endianness_t;
+
 #endif /* TYPES_H */
