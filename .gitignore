@@ -18,6 +18,7 @@ bin/
 
 # Raw data files
 *.raw
+*.wav
 
 # Performance profiling outputs
 callgrind.out
