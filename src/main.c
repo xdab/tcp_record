@@ -16,7 +16,7 @@
 #include "types.h"
 #include "wav.h"
 
-#define SAMPLE_BUF_SIZE 4096
+#define SAMPLE_BUF_SIZE 2048
 
 volatile int do_exit = 0;
 
