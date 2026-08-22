@@ -95,7 +95,6 @@ void options_usage(void)
             "\t-f, --format <fmt>   sample format: s8, u8, s16, u16, f32\n"
             "\t                     multi-byte formats accept le/be suffix (e.g. s16le)\n"
             "\t                     default endianness: big-endian (network byte order)\n"
-            "\t-l                   override to little-endian\n"
             "\t-r, --rate <hz>      sample rate (default: 48000)\n"
             "\t-s, --sql <level>    FM squelch threshold (0=off, default: 0)\n"
             "\t-c, --cal            calibrate: print envelope histogram\n"
@@ -118,7 +117,7 @@ int options_parse(int argc, char **argv, options_t *opts)
     opts->squelch_mode = SQUELCH_FM;
     opts->sample_rate = 48000;
 
-    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:coPD:dlh", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:coPD:dh", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -151,9 +150,6 @@ int options_parse(int argc, char **argv, options_t *opts)
         case 'D':
             strncpy(opts->rec_dir, optarg, sizeof(opts->rec_dir) - 1);
             opts->rec_dir[sizeof(opts->rec_dir) - 1] = '\0';
-            break;
-        case 'l':
-            opts->endianness = ENDIAN_LE;
             break;
         case 'd':
             opts->debug = 1;
