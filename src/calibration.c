@@ -12,7 +12,8 @@ void cal_init(cal_state_t *c, int sample_rate)
 
 void cal_accumulate(cal_state_t *c, float envelope, int n)
 {
-    int b = (int)(envelope / CAL_HIST_BUCKET_WIDTH);
+    float val = sqrtf(envelope);
+    int b = (int)(val / CAL_HIST_BUCKET_WIDTH);
     if (b < 0) b = 0;
     if (b >= CAL_HIST_BUCKETS) b = CAL_HIST_BUCKETS - 1;
     c->hist[b] += n;
@@ -34,7 +35,7 @@ void cal_print(cal_state_t *c)
     {
         float lo = i * CAL_HIST_BUCKET_WIDTH;
         float hi = lo + CAL_HIST_BUCKET_WIDTH;
-        fprintf(stderr, " %5.3f-%.3f: ", lo, hi);
+        fprintf(stderr, " %5.2f-%.2f: ", lo, hi);
         if (c->hist[i] > 0)
         {
             float logval = log10f((float)c->hist[i]);
