@@ -12,6 +12,7 @@ typedef struct
     sample_format_t format;
     sample_endianness_t endianness;
     int squelch_level;
+    int squelch_close_level;
     squelch_mode_t squelch_mode;
     int sample_rate;
     int calibrate;

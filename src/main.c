@@ -71,12 +71,15 @@ int main(int argc, char **argv)
     int sql_enabled = (opts.squelch_level > 0) || opts.calibrate;
     if (sql_enabled)
     {
-        float threshold = (float)opts.squelch_level / 1000.0f;
-        squelch_init(&sql, opts.squelch_mode, opts.sample_rate, threshold);
+        float open_th = (float)opts.squelch_level / 1000.0f;
+        float close_th = opts.squelch_close_level > 0
+                             ? (float)opts.squelch_close_level / 1000.0f
+                             : open_th;
+        squelch_init(&sql, opts.squelch_mode, opts.sample_rate, open_th, close_th);
         if (!opts.calibrate)
-            fprintf(stderr, "Squelch: enabled (threshold=%.4f)\n", threshold);
+            fprintf(stderr, "Squelch: enabled (open=%.4f, close=%.4f)\n", open_th, close_th);
         else
-            fprintf(stderr, "Calibrate: running (threshold=%.4f)\n", threshold);
+            fprintf(stderr, "Calibrate: running (open=%.4f, close=%.4f)\n", open_th, close_th);
     }
 
     sigact.sa_handler = sighandler;

@@ -12,6 +12,7 @@ static const struct option long_options[] = {
     {"format", required_argument, NULL, 'f'},
     {"rate", required_argument, NULL, 'r'},
     {"sql", required_argument, NULL, 's'},
+    {"sql-close", required_argument, NULL, 'S'},
     {"cal", no_argument, NULL, 'c'},
     {"stdout", no_argument, NULL, 'o'},
     {"record", no_argument, NULL, 'P'},
@@ -96,7 +97,8 @@ void options_usage(void)
             "\t                     multi-byte formats accept le/be suffix (e.g. s16le)\n"
             "\t                     default endianness: big-endian (network byte order)\n"
             "\t-r, --rate <hz>      sample rate (default: 48000)\n"
-            "\t-s, --sql <level>    FM squelch threshold (0=off, default: 0)\n"
+            "\t-s, --sql <level>    squelch open threshold (0=off, default: 0)\n"
+            "\t-S, --sql-close <l>  squelch close threshold (optional, default: same as -s)\n"
             "\t-c, --cal            calibrate: print envelope histogram\n"
             "\t-P, --record         auto-record: write WAV files on squelch open\n"
             "\t-D, --recdir <dir>   directory for recorded WAVs (default: cwd)\n"
@@ -117,7 +119,7 @@ int options_parse(int argc, char **argv, options_t *opts)
     opts->squelch_mode = SQUELCH_FM;
     opts->sample_rate = 48000;
 
-    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:coPD:dh", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:S:coPD:dh", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -137,6 +139,9 @@ int options_parse(int argc, char **argv, options_t *opts)
             break;
         case 's':
             opts->squelch_level = (int)(atof(optarg) * 1000);
+            break;
+        case 'S':
+            opts->squelch_close_level = (int)(atof(optarg) * 1000);
             break;
         case 'c':
             opts->calibrate = 1;

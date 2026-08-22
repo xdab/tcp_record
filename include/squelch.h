@@ -28,7 +28,7 @@ typedef struct
 } squelch_state_t;
 
 void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
-                  float threshold);
+                  float open_threshold, float close_threshold);
 int squelch_process(squelch_state_t *s, const float *in, float *out, int len);
 
 #endif /* SQUELCH_H */

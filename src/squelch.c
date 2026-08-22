@@ -8,7 +8,7 @@
 #endif
 
 void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
-                  float threshold)
+                  float open_threshold, float close_threshold)
 {
     memset(s, 0, sizeof(squelch_state_t));
     s->mode = mode;
@@ -21,14 +21,14 @@ void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
     s->hp_coef = rc / (rc + dt);
 
     /* envelope follower: fast attack, slow decay */
-    float attack_ms = 1.0f;
-    float decay_ms = 50.0f;
+    float attack_ms = 5.0f;
+    float decay_ms = 100.0f;
     s->env_attack = expf(-1.0f / ((attack_ms / 1000.0f) * (float)sample_rate));
     s->env_decay = expf(-1.0f / ((decay_ms / 1000.0f) * (float)sample_rate));
 
     /* threshold + hysteresis */
-    s->open_threshold = threshold;
-    s->close_threshold = threshold * 1.5f;
+    s->open_threshold = open_threshold;
+    s->close_threshold = close_threshold;
 }
 
 static inline float high_pass(squelch_state_t *s, float in)
