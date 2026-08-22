@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 
             if (opts.calibrate)
             {
-                cal_accumulate(&cal, sql.envelope, n);
+                cal_accumulate(&cal, sql.envelope * sql.norm_factor, n);
                 if (cal_should_print(&cal))
                     cal_print(&cal);
             }

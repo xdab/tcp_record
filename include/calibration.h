@@ -1,8 +1,8 @@
 #ifndef CALIBRATION_H
 #define CALIBRATION_H
 
-#define CAL_HIST_BUCKETS 30
-#define CAL_HIST_BUCKET_WIDTH 0.01f
+#define CAL_HIST_BUCKETS 20
+#define CAL_HIST_BUCKET_WIDTH 0.05f
 
 typedef struct
 {

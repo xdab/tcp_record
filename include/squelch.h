@@ -20,6 +20,7 @@ typedef struct
     float envelope;
     float env_attack;       /* fast attack coefficient */
     float env_decay;        /* slow decay coefficient */
+    float norm_factor;      /* bandwidth normalization factor */
 
     /* threshold + hysteresis */
     int open;

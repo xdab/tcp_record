@@ -26,6 +26,10 @@ void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
     s->env_attack = expf(-1.0f / ((attack_ms / 1000.0f) * (float)sample_rate));
     s->env_decay = expf(-1.0f / ((decay_ms / 1000.0f) * (float)sample_rate));
 
+    /* bandwidth normalization: scale envelope to [0,1] for white noise */
+    float nyquist = (float)sample_rate / 2.0f;
+    s->norm_factor = 4.0f * sqrtf(nyquist / (nyquist - hp_freq));
+
     /* threshold + hysteresis */
     s->open_threshold = open_threshold;
     s->close_threshold = close_threshold;
@@ -57,15 +61,16 @@ int squelch_process(squelch_state_t *s, const float *in, float *out, int len)
         out[i] = s->open ? in[i] : 0.0f;
     }
 
-    /* threshold + hysteresis (per-block, uses final envelope value) */
+    /* threshold + hysteresis (per-block, uses bandwidth-normalized envelope) */
+    float norm_env = s->envelope * s->norm_factor;
     if (s->open)
     {
-        if (s->envelope > s->close_threshold)
+        if (norm_env > s->close_threshold)
             s->open = 0;
     }
     else
     {
-        if (s->envelope < s->open_threshold)
+        if (norm_env < s->open_threshold)
             s->open = 1;
     }
 
