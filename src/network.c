@@ -91,23 +91,6 @@ int net_recv_samples(net_state_t *s, float *out, int max_samples)
 
     while (written < max_samples)
     {
-        /* if we have residual bytes, try to fill a sample before blocking */
-        if (s->residual_len > 0 && s->residual_len < s->bps)
-        {
-            /* need more bytes: try a non-blocking peek first */
-            ssize_t n = recv(s->sockfd, s->residual + s->residual_len,
-                             s->bps - s->residual_len, 0);
-            if (n <= 0)
-            {
-                if (n == 0)
-                    return written > 0 ? written : 0;
-                if (!errno || errno == EINTR)
-                    continue;
-                return -1;
-            }
-            s->residual_len += (int)n;
-        }
-
         /* have a complete sample in residual? */
         if (s->residual_len >= s->bps)
         {
