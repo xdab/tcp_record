@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "calibration.h"
@@ -13,6 +14,7 @@
 #include "options.h"
 #include "squelch.h"
 #include "types.h"
+#include "wav.h"
 
 #define SAMPLE_BUF_SIZE 4096
 
@@ -85,7 +87,21 @@ int main(int argc, char **argv)
 
     float samples[SAMPLE_BUF_SIZE];
     int16_t outbuf[SAMPLE_BUF_SIZE];
-    int sql_block_count = 0;
+    wav_t *wav = NULL;
+    int auto_record = sql_enabled && !opts.calibrate;
+
+    if (opts.output[0] != '\0' && !auto_record)
+    {
+        wav = wav_open(opts.output, opts.sample_rate, 1, 16);
+        if (!wav)
+        {
+            fprintf(stderr, "Error: cannot open WAV file: %s\n", opts.output);
+            net_close(net);
+            return EXIT_FAILURE;
+        }
+        fprintf(stderr, "WAV: writing to %s (%d Hz, 16-bit mono)\n",
+                opts.output, opts.sample_rate);
+    }
 
     cal_state_t cal;
     if (opts.calibrate)
@@ -117,19 +133,40 @@ int main(int argc, char **argv)
             else
             {
                 if (sql.open != was_open)
-                    fprintf(stderr, "Squelch %s (env=%.4f)\n",
-                            sql.open ? "opened" : "closed", sql.envelope);
-                if (++sql_block_count >= 12)
                 {
-                    fprintf(stderr, "sql: env=%.4f %s\n",
-                            sql.envelope, sql.open ? "OPEN" : "CLOSED");
-                    sql_block_count = 0;
+                    if (sql.open)
+                    {
+                        /* squelch opened - start recording */
+                        time_t now = time(NULL);
+                        struct tm *tm = localtime(&now);
+                        char path[256];
+                        strftime(path, sizeof(path), "REC_%Y-%m-%d_%H-%M-%S", tm);
+                        int end = strlen(path);
+                        snprintf(path + end, sizeof(path) - end, "_%d.wav", opts.port);
+                        wav = wav_open(path, opts.sample_rate, 1, 16);
+                        if (wav)
+                            fprintf(stderr, "Squelch opened -> recording to %s\n", path);
+                        else
+                            fprintf(stderr, "Squelch opened -> failed to open %s\n", path);
+                    }
+                    else
+                    {
+                        /* squelch closed - stop recording */
+                        if (wav)
+                        {
+                            wav_close(wav);
+                            wav = NULL;
+                            fprintf(stderr, "Squelch closed -> recording stopped\n");
+                        }
+                    }
                 }
             }
         }
 
         float_to_s16le(samples, outbuf, n);
-        if (write_all(STDOUT_FILENO, outbuf, n * sizeof(int16_t)) < 0)
+        if (wav)
+            wav_write(wav, outbuf, n * sizeof(int16_t));
+        else if (!auto_record && write_all(STDOUT_FILENO, outbuf, n * sizeof(int16_t)) < 0)
         {
             if (!do_exit)
                 fprintf(stderr, "Write error (broken pipe?)\n");
@@ -137,6 +174,8 @@ int main(int argc, char **argv)
         }
     }
 
+    if (wav)
+        wav_close(wav);
     net_close(net);
     fprintf(stderr, "Exiting...\n");
     return 0;

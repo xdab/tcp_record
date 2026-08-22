@@ -13,6 +13,7 @@ static const struct option long_options[] = {
     {"rate", required_argument, NULL, 'r'},
     {"sql", required_argument, NULL, 's'},
     {"cal", no_argument, NULL, 'c'},
+    {"output", required_argument, NULL, 'o'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}};
 
@@ -96,6 +97,7 @@ void options_usage(void)
             "\t-r, --rate <hz>      sample rate (default: 48000)\n"
             "\t-s, --sql <level>    FM squelch threshold (0=off, default: 0)\n"
             "\t-c, --cal            calibrate: print envelope histogram\n"
+            "\t-o, --output <file>  write WAV to file (default: stdout)\n"
             "\t-d                   enable debug output\n"
             "\t-h, --help           display this help\n"
             "\n");
@@ -112,7 +114,7 @@ int options_parse(int argc, char **argv, options_t *opts)
     opts->squelch_mode = SQUELCH_FM;
     opts->sample_rate = 48000;
 
-    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:cdlh", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:co:dlh", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -135,6 +137,10 @@ int options_parse(int argc, char **argv, options_t *opts)
             break;
         case 'c':
             opts->calibrate = 1;
+            break;
+        case 'o':
+            strncpy(opts->output, optarg, sizeof(opts->output) - 1);
+            opts->output[sizeof(opts->output) - 1] = '\0';
             break;
         case 'l':
             opts->endianness = ENDIAN_LE;
