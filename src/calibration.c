@@ -12,8 +12,7 @@ void cal_init(cal_state_t *c, int sample_rate)
 
 void cal_accumulate(cal_state_t *c, float envelope, int n)
 {
-    float val = sqrtf(envelope);
-    int b = (int)(val / CAL_HIST_BUCKET_WIDTH);
+    int b = (int)(envelope / CAL_HIST_BUCKET_WIDTH);
     if (b < 0) b = 0;
     if (b >= CAL_HIST_BUCKETS) b = CAL_HIST_BUCKETS - 1;
     c->hist[b] += n;
