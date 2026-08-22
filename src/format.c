@@ -86,3 +86,16 @@ float convert_sample(const uint8_t *b, sample_format_t fmt, sample_endianness_t 
     }
     return 0.0f;
 }
+
+void float_to_s16le(const float *in, int16_t *out, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        float v = in[i] * 32767.0f;
+        if (v > 32767.0f)
+            v = 32767.0f;
+        else if (v < -32768.0f)
+            v = -32768.0f;
+        out[i] = (int16_t)v;
+    }
+}

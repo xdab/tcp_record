@@ -1,6 +1,7 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
+#include "squelch.h"
 #include "types.h"
 
 typedef struct
@@ -10,6 +11,10 @@ typedef struct
     int port;
     sample_format_t format;
     sample_endianness_t endianness;
+    int squelch_level;
+    squelch_mode_t squelch_mode;
+    int sample_rate;
+    int calibrate;
     int optind;
 } options_t;
 

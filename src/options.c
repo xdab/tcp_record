@@ -10,6 +10,9 @@ static const struct option long_options[] = {
     {"addr", required_argument, NULL, 'a'},
     {"port", required_argument, NULL, 'p'},
     {"format", required_argument, NULL, 'f'},
+    {"rate", required_argument, NULL, 'r'},
+    {"sql", required_argument, NULL, 's'},
+    {"cal", no_argument, NULL, 'c'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}};
 
@@ -90,6 +93,9 @@ void options_usage(void)
             "\t                     multi-byte formats accept le/be suffix (e.g. s16le)\n"
             "\t                     default endianness: big-endian (network byte order)\n"
             "\t-l                   override to little-endian\n"
+            "\t-r, --rate <hz>      sample rate (default: 48000)\n"
+            "\t-s, --sql <level>    FM squelch threshold (0=off, default: 0)\n"
+            "\t-c, --cal            calibrate: print envelope histogram\n"
             "\t-d                   enable debug output\n"
             "\t-h, --help           display this help\n"
             "\n");
@@ -103,8 +109,10 @@ int options_parse(int argc, char **argv, options_t *opts)
     memset(opts, 0, sizeof(options_t));
     opts->endianness = ENDIAN_BE;
     opts->format = SAMPLE_S16;
+    opts->squelch_mode = SQUELCH_FM;
+    opts->sample_rate = 48000;
 
-    while ((opt = getopt_long(argc, argv, "a:p:f:dlh", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:cdlh", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -118,6 +126,15 @@ int options_parse(int argc, char **argv, options_t *opts)
         case 'f':
             if (parse_format(optarg, &opts->format, &opts->endianness) < 0)
                 return -1;
+            break;
+        case 'r':
+            opts->sample_rate = atoi(optarg);
+            break;
+        case 's':
+            opts->squelch_level = (int)(atof(optarg) * 1000);
+            break;
+        case 'c':
+            opts->calibrate = 1;
             break;
         case 'l':
             opts->endianness = ENDIAN_LE;

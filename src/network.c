@@ -131,8 +131,6 @@ int net_recv_samples(net_state_t *s, float *out, int max_samples)
             return -1;
         }
 
-        fprintf(stderr, "Received %zd bytes\n", n);
-
         int total = s->residual_len + (int)n;
         int full_samples = total / s->bps;
         int leftover = total % s->bps;
