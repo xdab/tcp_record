@@ -37,13 +37,17 @@ void cal_print(cal_state_t *c)
         fprintf(stderr, " %5.2f-%.2f: ", lo, hi);
         if (c->hist[i] > 0)
         {
+            fprintf(stderr, "%9d ", c->hist[i]);
             float logval = logf((float)c->hist[i]) / logf(5.0f);
             int bars = (int)((logval - 6.0f) * 10.0f);
             if (bars < 1) bars = 1;
             if (bars > max_bar) bars = max_bar;
             for (int j = 0; j < bars; j++)
                 fputc('#', stderr);
-            fprintf(stderr, "    %d", c->hist[i]);
+        }
+        else
+        {
+            fprintf(stderr, "         ");
         }
         fputc('\n', stderr);
     }
