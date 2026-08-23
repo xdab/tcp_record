@@ -15,6 +15,7 @@ typedef struct
     int squelch_close_level;
     squelch_mode_t squelch_mode;
     int sample_rate;
+    int signal_bw;
     int calibrate;
     int auto_record;
     char rec_dir[STATIC_STRING_SIZE];

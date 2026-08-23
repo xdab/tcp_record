@@ -8,14 +8,14 @@
 #endif
 
 void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
-                  float open_threshold, float close_threshold)
+                  float open_threshold, float close_threshold, int signal_bw)
 {
     memset(s, 0, sizeof(squelch_state_t));
     s->mode = mode;
     s->open = 1;
 
-    /* high-pass filter: 1st order IIR, cutoff ~3 kHz */
-    float hp_freq = 3000.0f;
+    /* high-pass filter: 1st order IIR, cutoff ~3.2 kHz */
+    float hp_freq = 3200.0f;
     float rc = 1.0f / (2.0f * (float)M_PI * hp_freq);
     float dt = 1.0f / (float)sample_rate;
     s->hp_coef = rc / (rc + dt);
@@ -26,9 +26,22 @@ void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
     s->env_attack = expf(-1.0f / ((attack_ms / 1000.0f) * (float)sample_rate));
     s->env_decay = expf(-1.0f / ((decay_ms / 1000.0f) * (float)sample_rate));
 
-    /* bandwidth normalization: scale envelope to [0,1] for white noise */
-    float nyquist = (float)sample_rate / 2.0f;
-    s->norm_factor = 4.0f * sqrtf(nyquist / (nyquist - hp_freq));
+    /* envelope normalization: model = a * ratio^b / (1 + ratio^c) * (ro/C)^d
+     * ratio = 2*sbw/ro, C = 3200
+     * a=0.4827, b=0.6272, c=0.7769, d=0.2916 */
+    s->env_norm = 0.0f;
+    if (signal_bw > 0)
+    {
+        float ratio = 2.0f * (float)signal_bw / (float)sample_rate;
+        if (ratio < 0.001f) ratio = 0.001f;
+        if (ratio > 10.0f) ratio = 10.0f;
+        float model = 0.4827f
+                      * powf(ratio, 0.6272f)
+                      / (1.0f + powf(ratio, 0.7769f))
+                      * powf((float)sample_rate / hp_freq, 0.2916f);
+        if (model > 0.0f)
+            s->env_norm = 1.0f / model;
+    }
 
     /* threshold + hysteresis */
     s->open_threshold = open_threshold;
@@ -61,16 +74,19 @@ int squelch_process(squelch_state_t *s, const float *in, float *out, int len)
         out[i] = s->open ? in[i] : 0.0f;
     }
 
-    /* threshold + hysteresis (per-block, uses bandwidth-normalized envelope) */
-    float norm_env = s->envelope * s->norm_factor;
+    /* threshold + hysteresis (per-block, uses normalized envelope) */
+    float env = s->envelope;
+    if (s->env_norm > 0.0f)
+        env *= s->env_norm;
+
     if (s->open)
     {
-        if (norm_env > s->close_threshold)
+        if (env > s->close_threshold)
             s->open = 0;
     }
     else
     {
-        if (norm_env < s->open_threshold)
+        if (env < s->open_threshold)
             s->open = 1;
     }
 

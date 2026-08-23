@@ -75,11 +75,14 @@ int main(int argc, char **argv)
         float close_th = opts.squelch_close_level > 0
                              ? (float)opts.squelch_close_level / 1000.0f
                              : open_th;
-        squelch_init(&sql, opts.squelch_mode, opts.sample_rate, open_th, close_th);
+        squelch_init(&sql, opts.squelch_mode, opts.sample_rate, open_th, close_th,
+                     opts.signal_bw);
         if (!opts.calibrate)
-            fprintf(stderr, "Squelch: enabled (open=%.4f, close=%.4f)\n", open_th, close_th);
+            fprintf(stderr, "Squelch: enabled (open=%.4f, close=%.4f, bw=%d Hz, norm=%.2f)\n",
+                    open_th, close_th, opts.signal_bw, sql.env_norm > 0.0f ? 1.0f / sql.env_norm : 0.0f);
         else
-            fprintf(stderr, "Calibrate: running (open=%.4f, close=%.4f)\n", open_th, close_th);
+            fprintf(stderr, "Calibrate: running (open=%.4f, close=%.4f, bw=%d Hz, norm=%.2f)\n",
+                    open_th, close_th, opts.signal_bw, sql.env_norm > 0.0f ? 1.0f / sql.env_norm : 0.0f);
     }
 
     sigact.sa_handler = sighandler;
@@ -120,7 +123,10 @@ int main(int argc, char **argv)
 
             if (opts.calibrate)
             {
-                cal_accumulate(&cal, sql.envelope * sql.norm_factor, n);
+                float env = sql.envelope;
+                if (sql.env_norm > 0.0f)
+                    env *= sql.env_norm;
+                cal_accumulate(&cal, env, n);
                 if (cal_should_print(&cal))
                     cal_print(&cal);
             }
