@@ -6,6 +6,11 @@
 #include "format.h"
 #include "options.h"
 
+enum
+{
+    OPT_MIN_DURATION = 256
+};
+
 static const struct option long_options[] = {
     {"addr", required_argument, NULL, 'a'},
     {"port", required_argument, NULL, 'p'},
@@ -18,6 +23,8 @@ static const struct option long_options[] = {
     {"stdout", no_argument, NULL, 'o'},
     {"record", no_argument, NULL, 'P'},
     {"recdir", required_argument, NULL, 'D'},
+    {"label", required_argument, NULL, 'L'},
+    {"min-duration", required_argument, NULL, OPT_MIN_DURATION},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}};
 
@@ -104,6 +111,8 @@ void options_usage(void)
             "\t-c, --cal            calibrate: print envelope histogram\n"
             "\t-P, --record         auto-record: write WAV files on squelch open\n"
             "\t-D, --recdir <dir>   directory for recorded WAVs (default: cwd)\n"
+            "\t-L, --label <label>  filename label (default: REC)\n"
+            "\t    --min-duration <s> discard recordings shorter than <s> seconds (default: 0.25)\n"
             "\t-o, --stdout         output s16le samples to stdout\n"
             "\t-d                   enable debug output\n"
             "\t-h, --help           display this help\n"
@@ -120,8 +129,10 @@ int options_parse(int argc, char **argv, options_t *opts)
     opts->format = SAMPLE_S16;
     opts->squelch_mode = SQUELCH_FM;
     opts->sample_rate = 48000;
+    opts->min_duration = 0.25f;
+    strncpy(opts->label, "REC", sizeof(opts->label) - 1);
 
-    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:S:b:coPD:dh", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:S:b:coPD:L:dh", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -160,6 +171,13 @@ int options_parse(int argc, char **argv, options_t *opts)
         case 'D':
             strncpy(opts->rec_dir, optarg, sizeof(opts->rec_dir) - 1);
             opts->rec_dir[sizeof(opts->rec_dir) - 1] = '\0';
+            break;
+        case 'L':
+            strncpy(opts->label, optarg, sizeof(opts->label) - 1);
+            opts->label[sizeof(opts->label) - 1] = '\0';
+            break;
+        case OPT_MIN_DURATION:
+            opts->min_duration = atof(optarg);
             break;
         case 'd':
             opts->debug = 1;

@@ -18,7 +18,9 @@ typedef struct
     int signal_bw;
     int calibrate;
     int auto_record;
+    char label[STATIC_STRING_SIZE];
     char rec_dir[STATIC_STRING_SIZE];
+    float min_duration;
     int stdout_output;
     int optind;
 } options_t;
