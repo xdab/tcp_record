@@ -74,6 +74,16 @@ static void stop_recording(wav_t **wav)
     fprintf(stderr, "Squelch closed -> recording stopped\n");
 }
 
+static void handle_calibration(cal_state_t *cal, squelch_state_t *sql, int n)
+{
+    float env = sql->envelope;
+    if (sql->env_norm > 0.0f)
+        env *= sql->env_norm;
+    cal_accumulate(cal, env, n);
+    if (cal_should_print(cal))
+        cal_print(cal);
+}
+
 int main(int argc, char **argv)
 {
     struct sigaction sigact;
@@ -153,14 +163,7 @@ int main(int argc, char **argv)
             squelch_process(&sql, samples, samples, n);
 
             if (opts.calibrate)
-            {
-                float env = sql.envelope;
-                if (sql.env_norm > 0.0f)
-                    env *= sql.env_norm;
-                cal_accumulate(&cal, env, n);
-                if (cal_should_print(&cal))
-                    cal_print(&cal);
-            }
+                handle_calibration(&cal, &sql, n);
             else if (sql.open != was_open)
             {
                 if (sql.open)

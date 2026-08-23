@@ -1,3 +1,5 @@
+#define _XOPEN_SOURCE 700
+
 #include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -85,6 +87,29 @@ net_state_t *net_connect(const char *addr, int port, sample_format_t fmt, sample
     return s;
 }
 
+static void copy_sample(uint8_t *dst, const net_state_t *s, int abs_off, ssize_t n)
+{
+    if (abs_off < s->residual_len)
+    {
+        memcpy(dst, s->residual + abs_off, s->bps);
+        return;
+    }
+
+    int rb_idx = abs_off - s->residual_len;
+    if (rb_idx + s->bps <= (int)n)
+    {
+        memcpy(dst, s->rbuf + rb_idx, s->bps);
+        return;
+    }
+
+    int from_res = s->residual_len - abs_off;
+    if (from_res < 0)
+        from_res = 0;
+    if (from_res > 0)
+        memcpy(dst, s->residual + abs_off, from_res);
+    memcpy(dst + from_res, s->rbuf, s->bps - from_res);
+}
+
 int net_recv_samples(net_state_t *s, float *out, int max_samples)
 {
     int written = 0;
@@ -126,29 +151,7 @@ int net_recv_samples(net_state_t *s, float *out, int max_samples)
         {
             uint8_t sample_buf[MAX_BPS];
             int abs_off = i * s->bps;
-
-            if (abs_off < s->residual_len)
-            {
-                memcpy(sample_buf, s->residual + abs_off, s->bps);
-            }
-            else
-            {
-                int rb_idx = abs_off - s->residual_len;
-                if (rb_idx + s->bps <= (int)n)
-                {
-                    memcpy(sample_buf, s->rbuf + rb_idx, s->bps);
-                }
-                else
-                {
-                    int from_res = s->residual_len - abs_off;
-                    if (from_res < 0)
-                        from_res = 0;
-                    if (from_res > 0)
-                        memcpy(sample_buf, s->residual + abs_off, from_res);
-                    memcpy(sample_buf + from_res, s->rbuf, s->bps - from_res);
-                }
-            }
-
+            copy_sample(sample_buf, s, abs_off, n);
             out[written++] = convert_sample(sample_buf, s->format, s->endianness);
         }
 
