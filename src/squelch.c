@@ -40,7 +40,7 @@ void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
                       / (1.0f + powf(ratio, 0.7769f))
                       * powf((float)sample_rate / hp_freq, 0.2916f);
         if (model > 0.0f)
-            s->env_norm = 1.0f / model;
+            s->env_norm = 1.5f / model;
     }
 
     /* threshold + hysteresis */
