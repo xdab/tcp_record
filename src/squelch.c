@@ -56,7 +56,7 @@ static inline float high_pass(squelch_state_t *s, float in)
     return out;
 }
 
-int squelch_process(squelch_state_t *s, const float *in, float *out, int len)
+int squelch_process(squelch_state_t *s, const float *in, float *out, int len, float *env_out)
 {
     for (int i = 0; i < len; i++)
     {
@@ -74,6 +74,9 @@ int squelch_process(squelch_state_t *s, const float *in, float *out, int len)
         float env = s->envelope;
         if (s->env_norm > 0.0f)
             env *= s->env_norm;
+
+        if (env_out)
+            env_out[i] = env;
 
         if (s->open)
         {

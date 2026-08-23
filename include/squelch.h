@@ -33,6 +33,6 @@ typedef struct
 
 void squelch_init(squelch_state_t *s, squelch_mode_t mode, int sample_rate,
                   float open_threshold, float close_threshold, int signal_bw);
-int squelch_process(squelch_state_t *s, const float *in, float *out, int len);
+int squelch_process(squelch_state_t *s, const float *in, float *out, int len, float *env_out);
 
 #endif /* SQUELCH_H */

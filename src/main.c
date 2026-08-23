@@ -89,14 +89,10 @@ static void discard_recording(wav_t **wav, const char *path)
         unlink(path);
 }
 
-static void handle_calibration(cal_state_t *cal, squelch_state_t *sql, int n)
+static void handle_calibration(cal_state_t *cal, const float *env, int n)
 {
-    float env = sql->envelope;
-    if (sql->env_norm > 0.0f)
-        env *= sql->env_norm;
-    cal_accumulate(cal, env, n);
-    if (cal_should_print(cal))
-        cal_print(cal);
+    for (int i = 0; i < n; i++)
+        cal_accumulate(cal, env[i], 1);
 }
 
 int main(int argc, char **argv)
@@ -148,6 +144,7 @@ int main(int argc, char **argv)
     sigaction(SIGTERM, &sigact, NULL);
 
     float samples[SAMPLE_BUF_SIZE];
+    float env_buf[SAMPLE_BUF_SIZE];
     int16_t outbuf[SAMPLE_BUF_SIZE];
     wav_t *wav = NULL;
     char rec_path[512] = {0};
@@ -178,10 +175,15 @@ int main(int argc, char **argv)
         if (sql_enabled)
         {
             int was_open = sql.open;
-            squelch_process(&sql, samples, samples, n);
+            squelch_process(&sql, samples, samples, n,
+                            opts.calibrate ? env_buf : NULL);
 
             if (opts.calibrate)
-                handle_calibration(&cal, &sql, n);
+            {
+                handle_calibration(&cal, env_buf, n);
+                if (cal_should_print(&cal))
+                    cal_print(&cal);
+            }
             else if (sql.open != was_open)
             {
                 if (sql.open)
