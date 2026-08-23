@@ -25,6 +25,8 @@ make clean && make       # build
 ## Code Conventions
 
 - Guard all headers with `#ifndef` / `#define` / `#endif`.
+- Prefer early returns (guard clauses) over deep nesting. Flatten `if` chains by returning or continuing early.
+- Maximum indentation depth: **4 levels**. If you find yourself going deeper, that is a signal to extract a function or restructure the control flow.
 
 ## Keeping Docs Up to Date
 

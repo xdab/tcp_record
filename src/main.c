@@ -41,6 +41,39 @@ static int write_all(int fd, const void *buf, size_t len)
     return 0;
 }
 
+static wav_t *start_recording(const options_t *opts)
+{
+    time_t now = time(NULL);
+    struct tm *tm = localtime(&now);
+    char path[512];
+
+    if (opts->rec_dir[0] != '\0')
+        snprintf(path, sizeof(path), "%s/", opts->rec_dir);
+    else
+        path[0] = '\0';
+
+    int end = strlen(path);
+    strftime(path + end, sizeof(path) - end, "REC_%Y-%m-%d_%H-%M-%S", tm);
+    end = strlen(path);
+    snprintf(path + end, sizeof(path) - end, "_%d.wav", opts->port);
+
+    wav_t *wav = wav_open(path, opts->sample_rate, 1, 16);
+    if (wav)
+        fprintf(stderr, "Squelch opened -> recording to %s\n", path);
+    else
+        fprintf(stderr, "Squelch opened -> failed to open %s\n", path);
+    return wav;
+}
+
+static void stop_recording(wav_t **wav)
+{
+    if (!*wav)
+        return;
+    wav_close(*wav);
+    *wav = NULL;
+    fprintf(stderr, "Squelch closed -> recording stopped\n");
+}
+
 int main(int argc, char **argv)
 {
     struct sigaction sigact;
@@ -56,17 +89,14 @@ int main(int argc, char **argv)
     }
 
     if (opts.debug)
-    {
         fprintf(stderr, "Connecting to %s:%d (format=%s, %s-endian)...\n",
                 opts.addr, opts.port, sample_format_name(opts.format),
                 opts.endianness == ENDIAN_BE ? "big" : "little");
-    }
 
     net_state_t *net = net_connect(opts.addr, opts.port, opts.format, opts.endianness);
     if (!net)
         return EXIT_FAILURE;
 
-    /* init squelch if threshold > 0 or calibrate mode */
     squelch_state_t sql;
     int sql_enabled = (opts.squelch_level > 0) || opts.calibrate;
     if (sql_enabled)
@@ -77,12 +107,13 @@ int main(int argc, char **argv)
                              : open_th;
         squelch_init(&sql, opts.squelch_mode, opts.sample_rate, open_th, close_th,
                      opts.signal_bw);
-        if (!opts.calibrate)
-            fprintf(stderr, "Squelch: enabled (open=%.4f, close=%.4f, bw=%d Hz, norm=%.2f)\n",
-                    open_th, close_th, opts.signal_bw, sql.env_norm > 0.0f ? 1.0f / sql.env_norm : 0.0f);
-        else
+        float norm = sql.env_norm > 0.0f ? 1.0f / sql.env_norm : 0.0f;
+        if (opts.calibrate)
             fprintf(stderr, "Calibrate: running (open=%.4f, close=%.4f, bw=%d Hz, norm=%.2f)\n",
-                    open_th, close_th, opts.signal_bw, sql.env_norm > 0.0f ? 1.0f / sql.env_norm : 0.0f);
+                    open_th, close_th, opts.signal_bw, norm);
+        else
+            fprintf(stderr, "Squelch: enabled (open=%.4f, close=%.4f, bw=%d Hz, norm=%.2f)\n",
+                    open_th, close_th, opts.signal_bw, norm);
     }
 
     sigact.sa_handler = sighandler;
@@ -130,44 +161,12 @@ int main(int argc, char **argv)
                 if (cal_should_print(&cal))
                     cal_print(&cal);
             }
-            else
+            else if (sql.open != was_open)
             {
-                if (sql.open != was_open)
-                {
-                    if (sql.open)
-                    {
-                        /* squelch opened - start recording */
-                        if (opts.auto_record)
-                        {
-                            time_t now = time(NULL);
-                            struct tm *tm = localtime(&now);
-                            char path[512];
-                            if (opts.rec_dir[0] != '\0')
-                                snprintf(path, sizeof(path), "%s/", opts.rec_dir);
-                            else
-                                path[0] = '\0';
-                            int end = strlen(path);
-                            strftime(path + end, sizeof(path) - end, "REC_%Y-%m-%d_%H-%M-%S", tm);
-                            end = strlen(path);
-                            snprintf(path + end, sizeof(path) - end, "_%d.wav", opts.port);
-                            wav = wav_open(path, opts.sample_rate, 1, 16);
-                            if (wav)
-                                fprintf(stderr, "Squelch opened -> recording to %s\n", path);
-                            else
-                                fprintf(stderr, "Squelch opened -> failed to open %s\n", path);
-                        }
-                    }
-                    else
-                    {
-                        /* squelch closed - stop recording */
-                        if (wav)
-                        {
-                            wav_close(wav);
-                            wav = NULL;
-                            fprintf(stderr, "Squelch closed -> recording stopped\n");
-                        }
-                    }
-                }
+                if (sql.open)
+                    wav = start_recording(&opts);
+                else
+                    stop_recording(&wav);
             }
         }
 
