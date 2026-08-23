@@ -43,7 +43,7 @@ void cal_print(cal_state_t *c)
             if (bars > max_bar) bars = max_bar;
             for (int j = 0; j < bars; j++)
                 fputc('#', stderr);
-            fprintf(stderr, " %d", c->hist[i]);
+            fprintf(stderr, "    %d", c->hist[i]);
         }
         fputc('\n', stderr);
     }
