@@ -70,24 +70,27 @@ int squelch_process(squelch_state_t *s, const float *in, float *out, int len)
         float coeff = (rect > s->envelope) ? s->env_attack : s->env_decay;
         s->envelope = coeff * s->envelope + (1.0f - coeff) * rect;
 
+        /* threshold check per-sample */
+        float env = s->envelope;
+        if (s->env_norm > 0.0f)
+            env *= s->env_norm;
+
+        if (s->open)
+        {
+            if (env > s->close_threshold)
+                s->open = 0;
+        }
+        else
+        {
+            if (env < s->open_threshold)
+            {
+                s->open = 1;
+                s->open_idx = i;
+            }
+        }
+
         /* gate audio */
         out[i] = s->open ? in[i] : 0.0f;
-    }
-
-    /* threshold + hysteresis (per-block, uses normalized envelope) */
-    float env = s->envelope;
-    if (s->env_norm > 0.0f)
-        env *= s->env_norm;
-
-    if (s->open)
-    {
-        if (env > s->close_threshold)
-            s->open = 0;
-    }
-    else
-    {
-        if (env < s->open_threshold)
-            s->open = 1;
     }
 
     return s->open;

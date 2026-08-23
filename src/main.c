@@ -152,6 +152,7 @@ int main(int argc, char **argv)
     wav_t *wav = NULL;
     char rec_path[512] = {0};
     int recording_samples = 0;
+    int write_skip = 0;
 
     if (opts.auto_record && opts.rec_dir[0] != '\0')
         fprintf(stderr, "Auto-record: WAVs will be saved to %s\n", opts.rec_dir);
@@ -186,6 +187,7 @@ int main(int argc, char **argv)
                 if (sql.open)
                 {
                     recording_samples = 0;
+                    write_skip = sql.open_idx;
                     wav = start_recording(&opts, rec_path);
                 }
                 else
@@ -206,8 +208,13 @@ int main(int argc, char **argv)
         float_to_s16le(samples, outbuf, n);
         if (wav)
         {
-            wav_write(wav, outbuf, n * sizeof(int16_t));
-            recording_samples += n;
+            int write_n = n - write_skip;
+            if (write_n > 0)
+            {
+                wav_write(wav, outbuf + write_skip, write_n * sizeof(int16_t));
+                recording_samples += write_n;
+            }
+            write_skip = 0;
         }
         if (opts.stdout_output && write_all(STDOUT_FILENO, outbuf, n * sizeof(int16_t)) < 0)
         {

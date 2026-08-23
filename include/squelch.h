@@ -26,6 +26,7 @@ typedef struct
 
     /* threshold + hysteresis */
     int open;
+    int open_idx;
     float open_threshold;
     float close_threshold;
 } squelch_state_t;
