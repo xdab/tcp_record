@@ -12,6 +12,7 @@
 #include "format.h"
 #include "network.h"
 #include "options.h"
+#include "recording.h"
 #include "squelch.h"
 #include "types.h"
 #include "wav.h"
@@ -39,54 +40,6 @@ static int write_all(int fd, const void *buf, size_t len)
         len -= n;
     }
     return 0;
-}
-
-static wav_t *start_recording(const options_t *opts, char *path_out)
-{
-    time_t now = time(NULL);
-    struct tm *tm = localtime(&now);
-    char path[512];
-
-    if (opts->rec_dir[0] != '\0')
-        snprintf(path, sizeof(path), "%s/", opts->rec_dir);
-    else
-        path[0] = '\0';
-
-    int end = strlen(path);
-    snprintf(path + end, sizeof(path) - end, "%s_%d_", opts->label, opts->port);
-    end = strlen(path);
-    strftime(path + end, sizeof(path) - end, "%Y%m%d_%H%M%S", tm);
-    end = strlen(path);
-    snprintf(path + end, sizeof(path) - end, ".wav");
-
-    if (path_out)
-        snprintf(path_out, 512, "%s", path);
-
-    wav_t *wav = wav_open(path, opts->sample_rate, 1, 16);
-    if (wav)
-        fprintf(stderr, "Squelch opened -> recording to %s\n", path);
-    else
-        fprintf(stderr, "Squelch opened -> failed to open %s\n", path);
-    return wav;
-}
-
-static void stop_recording(wav_t **wav)
-{
-    if (!*wav)
-        return;
-    wav_close(*wav);
-    *wav = NULL;
-    fprintf(stderr, "Squelch closed -> recording stopped\n");
-}
-
-static void discard_recording(wav_t **wav, const char *path)
-{
-    if (!*wav)
-        return;
-    wav_close(*wav);
-    *wav = NULL;
-    if (path[0] != '\0')
-        unlink(path);
 }
 
 static void handle_calibration(cal_state_t *cal, const float *env, int n)
@@ -147,7 +100,8 @@ int main(int argc, char **argv)
     float env_buf[SAMPLE_BUF_SIZE];
     int16_t outbuf[SAMPLE_BUF_SIZE];
     wav_t *wav = NULL;
-    char rec_path[512] = {0};
+    char temp_path[512] = {0};
+    char final_path[512] = {0};
     int recording_samples = 0;
     int write_skip = 0;
 
@@ -190,19 +144,19 @@ int main(int argc, char **argv)
                 {
                     recording_samples = 0;
                     write_skip = sql.open_idx;
-                    wav = start_recording(&opts, rec_path);
+                    wav = start_recording(&opts, temp_path, final_path);
                 }
                 else
                 {
                     float duration = (float)recording_samples / (float)opts.sample_rate;
                     if (opts.min_duration > 0.0f && duration < opts.min_duration)
                     {
-                        discard_recording(&wav, rec_path);
+                        discard_recording(&wav, temp_path);
                         fprintf(stderr, "Squelch closed -> discarded (%.2fs < %.2fs)\n",
                                 duration, opts.min_duration);
                     }
                     else
-                        stop_recording(&wav);
+                        stop_recording(&wav, temp_path, final_path);
                 }
             }
         }
@@ -231,12 +185,12 @@ int main(int argc, char **argv)
         float duration = (float)recording_samples / (float)opts.sample_rate;
         if (opts.min_duration > 0.0f && duration < opts.min_duration)
         {
-            discard_recording(&wav, rec_path);
+            discard_recording(&wav, temp_path);
             fprintf(stderr, "Exiting -> discarded short recording (%.2fs < %.2fs)\n",
                     duration, opts.min_duration);
         }
         else
-            stop_recording(&wav);
+            stop_recording(&wav, temp_path, final_path);
     }
     net_close(net);
     fprintf(stderr, "Exiting...\n");

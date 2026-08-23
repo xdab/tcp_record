@@ -10,7 +10,7 @@ Read `README.md` for usage, CLI options, and examples.
 ## Project Structure
 
 ```text
-include/    - Header files for each module (types, options, network, format, squelch, wav, calibration)
+include/    - Header files for each module (types, options, network, format, squelch, wav, calibration, recording)
 src/        - C source files (main + one per module)
 Makefile    - Build system (gcc, -O2, -Wall -Wextra, -lm)
 ```

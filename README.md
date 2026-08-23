@@ -67,4 +67,6 @@ tcp_record -a 192.168.1.100 -p 7475 -f s16be -s 0.02 -b 6000 -c
 
 ## WAV Files
 
-Recorded files are named `<label>_<port>_<YYYYMMDD_HHMMSS>.wav`, e.g. `REC_7475_20260822_221728.wav`.
+Recordings are written to a temporary file (`TEMP_<hex>.wav`) and renamed to the final name only when the recording is long enough. Short recordings (below `--min-duration`) are deleted without ever appearing under the final name.
+
+Final filenames follow the pattern `<label>_<port>_<YYYYMMDD_HHMMSS>.wav`, e.g. `REC_7475_20260822_221728.wav`.
