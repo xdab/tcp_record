@@ -47,6 +47,5 @@ void cal_print(cal_state_t *c)
         }
         fputc('\n', stderr);
     }
-    fprintf(stderr, "--- total: %d samples ---\n", c->total_samples);
     c->interval_samples = 0;
 }
