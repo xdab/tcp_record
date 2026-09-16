@@ -20,9 +20,9 @@ struct net_state
     sample_format_t format;
     sample_endianness_t endianness;
     int bps;
-    uint8_t residual[MAX_BPS];
-    int residual_len;
-    uint8_t rbuf[RECV_BUF_SIZE];
+    uint8_t buf[RECV_BUF_SIZE + MAX_BPS];
+    int len;    /* valid bytes in buf */
+    int pos;    /* start of next unconsumed sample */
 };
 
 static int tcp_connect(const char *addr, int port)
@@ -81,33 +81,11 @@ net_state_t *net_connect(const char *addr, int port, sample_format_t fmt, sample
     s->format = fmt;
     s->endianness = end;
     s->bps = sample_bytes_per_sample(fmt);
-    s->residual_len = 0;
+    s->len = 0;
+    s->pos = 0;
 
     fprintf(stderr, "TCP: connected to %s:%d\n", addr, port);
     return s;
-}
-
-static void copy_sample(uint8_t *dst, const net_state_t *s, int abs_off, ssize_t n)
-{
-    if (abs_off < s->residual_len)
-    {
-        memcpy(dst, s->residual + abs_off, s->bps);
-        return;
-    }
-
-    int rb_idx = abs_off - s->residual_len;
-    if (rb_idx + s->bps <= (int)n)
-    {
-        memcpy(dst, s->rbuf + rb_idx, s->bps);
-        return;
-    }
-
-    int from_res = s->residual_len - abs_off;
-    if (from_res < 0)
-        from_res = 0;
-    if (from_res > 0)
-        memcpy(dst, s->residual + abs_off, from_res);
-    memcpy(dst + from_res, s->rbuf, s->bps - from_res);
 }
 
 int net_recv_samples(net_state_t *s, float *out, int max_samples)
@@ -116,20 +94,23 @@ int net_recv_samples(net_state_t *s, float *out, int max_samples)
 
     while (written < max_samples)
     {
-        /* have a complete sample in residual? */
-        if (s->residual_len >= s->bps)
+        /* consume complete samples */
+        if (s->len - s->pos >= s->bps)
         {
-            out[written++] = convert_sample(s->residual, s->format, s->endianness);
-            /* shift remaining residual bytes */
-            int remain = s->residual_len - s->bps;
-            if (remain > 0)
-                memmove(s->residual, s->residual + s->bps, remain);
-            s->residual_len = remain;
+            out[written++] = convert_sample(s->buf + s->pos, s->format, s->endianness);
+            s->pos += s->bps;
             continue;
         }
 
-        /* residual is empty, block on recv */
-        ssize_t n = recv(s->sockfd, s->rbuf, RECV_BUF_SIZE, 0);
+        /* compact: drop consumed bytes, keep the partial sample tail */
+        if (s->pos > 0)
+        {
+            memmove(s->buf, s->buf + s->pos, s->len - s->pos);
+            s->len -= s->pos;
+            s->pos = 0;
+        }
+
+        ssize_t n = recv(s->sockfd, s->buf + s->len, sizeof(s->buf) - s->len, 0);
         if (n <= 0)
         {
             if (n == 0)
@@ -138,31 +119,7 @@ int net_recv_samples(net_state_t *s, float *out, int max_samples)
                 continue;
             return -1;
         }
-
-        int total = s->residual_len + (int)n;
-        int full_samples = total / s->bps;
-        int leftover = total % s->bps;
-
-        int to_copy = full_samples;
-        if (to_copy > max_samples - written)
-            to_copy = max_samples - written;
-
-        for (int i = 0; i < to_copy; i++)
-        {
-            uint8_t sample_buf[MAX_BPS];
-            int abs_off = i * s->bps;
-            copy_sample(sample_buf, s, abs_off, n);
-            out[written++] = convert_sample(sample_buf, s->format, s->endianness);
-        }
-
-        /* carry leftover bytes */
-        if (leftover > 0)
-            memcpy(s->residual, s->rbuf + (int)n - leftover, leftover);
-        s->residual_len = leftover;
-
-        /* if we couldn't fit all decoded samples, stop here */
-        if (full_samples > to_copy)
-            break;
+        s->len += (int)n;
     }
 
     return written;
