@@ -30,6 +30,9 @@ tcp_record -a <addr> -p <port> -f <format> [options]
 | `-P, --record`    | Auto-record: write WAV files on squelch open                                                   |
 | `-L, --label`     | Filename label (default: `REC`)                                                                |
 | `--min-duration`  | Discard recordings shorter than `<s>` seconds (default: 0.25)                                 |
+| `--tsql <hz>`     | CTCSS tone squelch: gate on a tone at `<hz>` (e.g. `127.3`)                                    |
+| `--tsql-level <dbfs>` | Tone gate threshold in dBFS (default: -33)                                                 |
+| `--tsql-delay <ms>`   | Ms below threshold before the tone gate closes (default: 100)                              |
 | `-D, --recdir`    | Directory for recorded WAVs (default: cwd)                                                     |
 | `-o, --stdout`    | Output s16le samples to stdout                                                                 |
 | `-c, --cal`       | Calibrate: print envelope histogram to help tune thresholds                                    |
@@ -42,6 +45,13 @@ Record from a TCP audio server with auto-recording:
 
 ```sh
 tcp_record -a 192.168.1.100 -p 7475 -f s16be -s 0.02 -P -D ./recordings
+```
+
+Record only while a 127.3 Hz CTCSS tone is present (threshold varies per tx; run with `-c --tsql` to see the actual levels):
+
+```sh
+tcp_record -a 192.168.1.100 -p 7475 -f s16le -r 16000 --tsql 127.3 \
+    --tsql-level -34 -P -D ./recordings
 ```
 
 Pipe audio to stdout:
@@ -61,9 +71,10 @@ tcp_record -a 192.168.1.100 -p 7475 -f s16be -s 0.02 -b 6000 -c
 1. Connects to the TCP server and receives raw audio bytes
 2. Converts samples to floating point (supports s8, u8, s16, u16, f32 with byte-swap handling)
 3. Applies a squelch gate: high-pass filters the signal, computes an envelope, and opens/closes based on thresholds with hysteresis
-4. When squelch opens (signal detected), starts writing a timestamped WAV file
-5. When squelch closes (silence), stops recording
-6. Gracefully exits and patches WAV headers on SIGINT/SIGTERM
+4. Optionally gates on a CTCSS tone level (`--tsql`): opens when the tone level crosses `--tsql-level`, closes after `--tsql-delay` ms below it; ANDed with the noise squelch when both are enabled
+5. When the combined gate opens, starts writing a timestamped WAV file
+6. When the combined gate closes, stops recording
+7. Gracefully exits and patches WAV headers on SIGINT/SIGTERM
 
 ## WAV Files
 

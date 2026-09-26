@@ -1,7 +1,8 @@
 # AGENTS.md
 
 tcp_record is a POSIX C program that connects to a TCP server streaming raw audio samples,
-applies a squelch gate (noise-activated noise suppression), and auto-records transmissions to timestamped WAV files.
+applies a squelch gate (noise-activated noise suppression) and an optional CTCSS tone
+squelch gate, and auto-records transmissions to timestamped WAV files.
 It supports multiple sample formats (s8, u8, s16, u16, f32) with configurable endianness
 and includes a calibration mode for tuning squelch thresholds. Built with `gcc` and linked only against `libm`.
 
@@ -10,10 +11,18 @@ Read `README.md` for usage, CLI options, and examples.
 ## Project Structure
 
 ```text
-include/    - Header files for each module (types, options, network, format, squelch, wav, calibration, recording)
+include/    - Header files for each module (types, options, network, format, squelch, tsql, calibration, recording, wav)
 src/        - C source files (main + one per module)
 Makefile    - Build system (gcc, -O2, -Wall -Wextra, -lm)
 ```
+
+## Architecture
+
+Data flow: network -> format conversion (float) -> squelch_process (HP filter + noise envelope, may zero samples) -> wav/stdout; tsql_process (CTCSS tone detector) reads the samples in parallel for tone gating.
+
+Gating: `main.c` ANDs the optional noise squelch and tone gate; recording follows combined-gate transitions (`handle_gate_transition()`).
+
+Each module is one stage; see its header in include/ for the interface. tsql.c holds the CTCSS tone detector and gate — don't tune its internal constants without re-running the bandwidth/floor experiments.
 
 ## Build & Verify
 

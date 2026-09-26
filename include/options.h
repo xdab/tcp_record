@@ -14,6 +14,9 @@ typedef struct
     int squelch_level;
     int squelch_close_level;
     squelch_mode_t squelch_mode;
+    float tsql_tone;
+    float tsql_level_dbfs;
+    float tsql_delay_ms;
     int sample_rate;
     int signal_bw;
     int calibrate;

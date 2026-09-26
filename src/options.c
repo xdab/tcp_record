@@ -8,7 +8,10 @@
 
 enum
 {
-    OPT_MIN_DURATION = 256
+    OPT_MIN_DURATION = 256,
+    OPT_TSQL,
+    OPT_TSQL_LEVEL,
+    OPT_TSQL_DELAY
 };
 
 static const struct option long_options[] = {
@@ -25,6 +28,9 @@ static const struct option long_options[] = {
     {"recdir", required_argument, NULL, 'D'},
     {"label", required_argument, NULL, 'L'},
     {"min-duration", required_argument, NULL, OPT_MIN_DURATION},
+    {"tsql", required_argument, NULL, OPT_TSQL},
+    {"tsql-level", required_argument, NULL, OPT_TSQL_LEVEL},
+    {"tsql-delay", required_argument, NULL, OPT_TSQL_DELAY},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}};
 
@@ -113,6 +119,9 @@ void options_usage(void)
             "\t-D, --recdir <dir>   directory for recorded WAVs (default: cwd)\n"
             "\t-L, --label <label>  filename label (default: REC)\n"
             "\t    --min-duration <s> discard recordings shorter than <s> seconds (default: 0.25)\n"
+            "\t    --tsql <hz>        CTCSS tone squelch gate at <hz> (e.g. 127.3)\n"
+            "\t    --tsql-level <dbfs> tone gate threshold in dBFS (default: -33)\n"
+            "\t    --tsql-delay <ms>   ms below threshold to close (default: 100)\n"
             "\t-o, --stdout         output s16le samples to stdout\n"
             "\t-d                   enable debug output\n"
             "\t-h, --help           display this help\n"
@@ -130,6 +139,8 @@ int options_parse(int argc, char **argv, options_t *opts)
     opts->squelch_mode = SQUELCH_FM;
     opts->sample_rate = 48000;
     opts->min_duration = 0.25f;
+    opts->tsql_level_dbfs = -33.0f;
+    opts->tsql_delay_ms = 100.0f;
     strncpy(opts->label, "REC", sizeof(opts->label) - 1);
 
     while ((opt = getopt_long(argc, argv, "a:p:f:r:s:S:b:coPD:L:dh", long_options, NULL)) != -1)
@@ -178,6 +189,15 @@ int options_parse(int argc, char **argv, options_t *opts)
             break;
         case OPT_MIN_DURATION:
             opts->min_duration = atof(optarg);
+            break;
+        case OPT_TSQL:
+            opts->tsql_tone = atof(optarg);
+            break;
+        case OPT_TSQL_LEVEL:
+            opts->tsql_level_dbfs = atof(optarg);
+            break;
+        case OPT_TSQL_DELAY:
+            opts->tsql_delay_ms = atof(optarg);
             break;
         case 'd':
             opts->debug = 1;
