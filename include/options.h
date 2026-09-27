@@ -9,6 +9,7 @@ typedef struct
     int debug;
     char addr[STATIC_STRING_SIZE];
     int port;
+    char file_input[STATIC_STRING_SIZE];
     sample_format_t format;
     sample_endianness_t endianness;
     int squelch_level;

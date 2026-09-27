@@ -20,5 +20,8 @@ bin/
 *.raw
 *.wav
 
+# Recordings from test runs
+test/
+
 # Performance profiling outputs
 callgrind.out

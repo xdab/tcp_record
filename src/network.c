@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,6 +89,31 @@ net_state_t *net_connect(const char *addr, int port, sample_format_t fmt, sample
     return s;
 }
 
+net_state_t *net_open_file(const char *path, sample_format_t fmt,
+                           sample_endianness_t end)
+{
+    net_state_t *s = calloc(1, sizeof(net_state_t));
+    if (!s)
+        return NULL;
+
+    s->sockfd = open(path, O_RDONLY);
+    if (s->sockfd < 0)
+    {
+        fprintf(stderr, "File: open(%s) failed: %s\n", path, strerror(errno));
+        free(s);
+        return NULL;
+    }
+
+    s->format = fmt;
+    s->endianness = end;
+    s->bps = sample_bytes_per_sample(fmt);
+    s->len = 0;
+    s->pos = 0;
+
+    fprintf(stderr, "File: reading %s\n", path);
+    return s;
+}
+
 int net_recv_samples(net_state_t *s, float *out, int max_samples)
 {
     int written = 0;
@@ -110,7 +136,7 @@ int net_recv_samples(net_state_t *s, float *out, int max_samples)
             s->pos = 0;
         }
 
-        ssize_t n = recv(s->sockfd, s->buf + s->len, sizeof(s->buf) - s->len, 0);
+        ssize_t n = read(s->sockfd, s->buf + s->len, sizeof(s->buf) - s->len);
         if (n <= 0)
         {
             if (n == 0)

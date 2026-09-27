@@ -13,10 +13,10 @@ enum
     OPT_TSQL_LEVEL,
     OPT_TSQL_DELAY
 };
-
 static const struct option long_options[] = {
     {"addr", required_argument, NULL, 'a'},
     {"port", required_argument, NULL, 'p'},
+    {"file-input", required_argument, NULL, 'I'},
     {"format", required_argument, NULL, 'f'},
     {"rate", required_argument, NULL, 'r'},
     {"sql", required_argument, NULL, 's'},
@@ -107,6 +107,7 @@ void options_usage(void)
             "Usage: tcp_record -a <addr> -p <port> -f <format> [-options]\n"
             "\t-a, --addr <addr>    server address (IP or hostname)\n"
             "\t-p, --port <port>    server port\n"
+            "\t-I, --file-input <f> read raw samples from <f> instead of TCP\n"
             "\t-f, --format <fmt>   sample format: s8, u8, s16, u16, f32\n"
             "\t                     multi-byte formats accept le/be suffix (e.g. s16le)\n"
             "\t                     default endianness: big-endian (network byte order)\n"
@@ -143,7 +144,7 @@ int options_parse(int argc, char **argv, options_t *opts)
     opts->tsql_delay_ms = 100.0f;
     strncpy(opts->label, "REC", sizeof(opts->label) - 1);
 
-    while ((opt = getopt_long(argc, argv, "a:p:f:r:s:S:b:coPD:L:dh", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "a:p:I:f:r:s:S:b:coPD:L:dh", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -153,6 +154,10 @@ int options_parse(int argc, char **argv, options_t *opts)
             break;
         case 'p':
             opts->port = atoi(optarg);
+            break;
+        case 'I':
+            strncpy(opts->file_input, optarg, sizeof(opts->file_input) - 1);
+            opts->file_input[sizeof(opts->file_input) - 1] = '\0';
             break;
         case 'f':
             if (parse_format(optarg, &opts->format, &opts->endianness) < 0)

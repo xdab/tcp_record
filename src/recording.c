@@ -66,17 +66,30 @@ wav_t *start_recording(const options_t *opts, char *temp_path, char *final_path)
     return wav;
 }
 
+/* avoid silently clobbering an existing recording: append _N before .wav */
+static void unique_target(char *target, size_t sz, const char *final_path)
+{
+    size_t stem = strlen(final_path) - 4; /* strip ".wav" */
+
+    snprintf(target, sz, "%s", final_path);
+    for (int i = 1; access(target, F_OK) == 0 && i < 1000; i++)
+        snprintf(target, sz, "%.*s_%d.wav", (int)stem, final_path, i);
+}
+
 void stop_recording(wav_t **wav, const char *temp_path, const char *final_path)
 {
+    char target[512];
+
     if (!*wav)
         return;
     wav_close(*wav);
     *wav = NULL;
-    if (rename(temp_path, final_path) == 0)
-        fprintf(stderr, "Squelch closed -> saved to %s\n", final_path);
+    unique_target(target, sizeof(target), final_path);
+    if (rename(temp_path, target) == 0)
+        fprintf(stderr, "Squelch closed -> saved to %s\n", target);
     else
         fprintf(stderr, "Squelch closed -> failed to rename %s to %s\n",
-                temp_path, final_path);
+                temp_path, target);
 }
 
 void discard_recording(wav_t **wav, const char *path)

@@ -1,6 +1,7 @@
 # AGENTS.md
 
-tcp_record is a POSIX C program that connects to a TCP server streaming raw audio samples,
+tcp_record is a POSIX C program that connects to a TCP server streaming raw audio samples
+(or reads them from a raw file via `-I/--file-input`),
 applies a squelch gate (noise-activated noise suppression) and an optional CTCSS tone
 squelch gate, and auto-records transmissions to timestamped WAV files.
 It supports multiple sample formats (s8, u8, s16, u16, f32) with configurable endianness
@@ -13,12 +14,13 @@ Read `README.md` for usage, CLI options, and examples.
 ```text
 include/    - Header files for each module (types, options, network, format, squelch, tsql, calibration, recording, wav)
 src/        - C source files (main + one per module)
+tools/      - Development utilities (raw_stats.py: raw file / CTCSS tone analyzer)
 Makefile    - Build system (gcc, -O2, -Wall -Wextra, -lm)
 ```
 
 ## Architecture
 
-Data flow: network -> format conversion (float) -> squelch_process (HP filter + noise envelope, may zero samples) -> wav/stdout; tsql_process (CTCSS tone detector) reads the samples in parallel for tone gating.
+Data flow: network (TCP or `-I` file input, same `net_recv_samples` path) -> format conversion (float) -> squelch_process (HP filter + noise envelope, may zero samples) -> wav/stdout; tsql_process (CTCSS tone detector) reads the samples in parallel for tone gating.
 
 Gating: `main.c` ANDs the optional noise squelch and tone gate; recording follows combined-gate transitions (`handle_gate_transition()`).
 

@@ -80,18 +80,25 @@ int main(int argc, char **argv)
     if (options_parse(argc, argv, &opts) != 0)
         return EXIT_FAILURE;
 
-    if (opts.addr[0] == '\0' || opts.port == 0)
+    if (opts.file_input[0] != '\0')
+    {
+        if (opts.addr[0] != '\0' || opts.port != 0)
+        {
+            fprintf(stderr, "Error: --file-input is mutually exclusive with -a/-p.\n");
+            options_usage();
+        }
+    }
+    else if (opts.addr[0] == '\0' || opts.port == 0)
     {
         fprintf(stderr, "Error: address and port are required.\n");
         options_usage();
     }
 
-    if (opts.debug)
-        fprintf(stderr, "Connecting to %s:%d (format=%s, %s-endian)...\n",
-                opts.addr, opts.port, sample_format_name(opts.format),
-                opts.endianness == ENDIAN_BE ? "big" : "little");
-
-    net_state_t *net = net_connect(opts.addr, opts.port, opts.format, opts.endianness);
+    net_state_t *net;
+    if (opts.file_input[0] != '\0')
+        net = net_open_file(opts.file_input, opts.format, opts.endianness);
+    else
+        net = net_connect(opts.addr, opts.port, opts.format, opts.endianness);
     if (!net)
         return EXIT_FAILURE;
 
@@ -155,7 +162,8 @@ int main(int argc, char **argv)
         if (n <= 0)
         {
             if (n == 0)
-                fprintf(stderr, "TCP: connection closed by server.\n");
+                fprintf(stderr, "%s", opts.file_input[0] ? "Input: end of file.\n"
+                                                         : "TCP: connection closed by server.\n");
             else
                 fprintf(stderr, "TCP: recv error\n");
             break;
